@@ -92,6 +92,8 @@ lib/audit/
 
 Unit tests cover `lib/audit/checks.ts` — all 6 checks (pass and fail cases) plus the overall weighted score calculation, using [Vitest](https://vitest.dev). Run with `npm run test`.
 
+**Cross-browser:** manually verified on Chrome, Edge, and a mobile browser (Android). Not tested on Safari (desktop or iOS) — no Mac or iPhone was available during development. Given the app uses standard CSS/Flexbox layout with no browser-specific APIs, Safari compatibility is expected but not confirmed.
+
 ## Deployment
 
 Deployed on Vercel, connected to the `main` branch — every push to `main` triggers an automatic production deployment. Environment variables (`GEMINI_API_KEY`, `GEMINI_MODEL`) are configured in the Vercel project settings, separately from local `.env.local`.
