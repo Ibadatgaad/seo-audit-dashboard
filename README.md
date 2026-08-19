@@ -74,6 +74,8 @@ lib/audit/
 
 **Prompt design:** the prompt explicitly requests JSON-only output matching a fixed schema (`generationConfig.responseMimeType: "application/json"`), which keeps parsing reliable. The page content sent to the model is capped at ~4,000 characters to keep requests small and fast.
 
+**Production hygiene:** `/api/audit` and the Dashboard page both set `maxDuration = 30` (the worst-case path is a 10s page fetch plus a 15s AI call, so this gives real headroom above Vercel's 10s default rather than risking a silent timeout). Both are also rate-limited to 10 requests per IP per 10 minutes via `lib/rate-limit.ts`, so a stranger hitting the endpoint in a loop can't silently drain the Gemini API quota.
+
 **Resilience:** every failure mode is handled without breaking the whole audit — missing API key, non-200 response, timeout (15s), malformed JSON, or a response that doesn't match the expected shape. In any of these cases, `run-audit.ts` still returns the full rule-based results, with `aiUnavailableReason` explaining what happened. The dashboard falls back to the plain rule-based issues list automatically when this happens — the AI layer is additive, never a hard dependency.
 
 ## Known limitations & future improvements
@@ -82,7 +84,7 @@ lib/audit/
 - **Single-page audits only.** No crawling, sitemap discovery, or multi-page comparison.
 - **No authentication or per-user data.** Every audit is anonymous and stateless.
 - **Gemini model names are volatile.** Google has retired several Gemini model IDs in 2026 on short notice. The model name is an environment variable (`GEMINI_MODEL`) rather than hardcoded specifically so a retirement can be fixed with a one-line config change instead of a code change.
-- **No rate limiting on `/api/audit`.** For a real production tool, this endpoint should be rate-limited to prevent abuse of both the target-site fetch and the Gemini API quota.
+- **Rate limiting is in-memory, not distributed.** Both `/api/audit` and the Dashboard page limit each IP to 10 audits per 10 minutes (`lib/rate-limit.ts`), returning a 429 when exceeded. This protects against casual abuse and accidental request loops, but the limit resets per serverless function instance — under heavy concurrent traffic across multiple warm instances, the effective limit is looser than 10/10min. A production version at scale would use a shared store (e.g. Redis/Upstash) instead.
 - **AI relevance judgments aren't cached.** Repeated audits of the same URL re-call Gemini every time; caching by URL + content hash would reduce cost and latency.
 - **Lighthouse Performance scores ~77 on mobile** (Accessibility, Best Practices, and SEO all score 100). This is primarily React hydration cost plus the dashboard intentionally avoiding caching so it always shows fresh audit results rather than a stale cached page — a deliberate trade-off, not an oversight.
 
