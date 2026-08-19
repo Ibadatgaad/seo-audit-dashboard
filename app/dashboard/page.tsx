@@ -5,15 +5,15 @@ type DashboardPageProps = {
 };
 
 function scoreColor(score: number): string {
-  if (score >= 80) return "text-green-600";
-  if (score >= 50) return "text-yellow-600";
-  return "text-red-600";
+  if (score >= 80) return "text-green-700";
+  if (score >= 50) return "text-yellow-700";
+  return "text-red-700";
 }
 
 function relevanceColor(rating: string): string {
-  if (rating === "strong") return "text-green-600";
-  if (rating === "weak") return "text-yellow-600";
-  return "text-red-600";
+  if (rating === "strong") return "text-green-700";
+  if (rating === "weak") return "text-yellow-700";
+  return "text-red-700";
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -137,9 +137,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <span
                   className={`font-medium ${
                     issue.severity === "high"
-                      ? "text-red-600"
+                      ? "text-red-700"
                       : issue.severity === "medium"
-                      ? "text-yellow-600"
+                      ? "text-yellow-700"
                       : "text-foreground/70"
                   }`}
                 >

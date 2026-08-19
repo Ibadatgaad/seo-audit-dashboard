@@ -19,7 +19,7 @@ export default function RootLayout({
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
           {children}
         </main>
-        <footer className="border-t border-surface-border px-4 py-4 text-center text-xs text-foreground/50 sm:px-6">
+        <footer className="border-t border-surface-border px-4 py-4 text-center text-xs text-foreground/70 sm:px-6">
           SEO Audit Dashboard — capstone project
         </footer>
       </body>
