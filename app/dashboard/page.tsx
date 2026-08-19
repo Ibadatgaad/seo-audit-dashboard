@@ -10,6 +10,12 @@ function scoreColor(score: number): string {
   return "text-red-600";
 }
 
+function relevanceColor(rating: string): string {
+  if (rating === "strong") return "text-green-600";
+  if (rating === "weak") return "text-yellow-600";
+  return "text-red-600";
+}
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const { url } = await searchParams;
 
@@ -42,7 +48,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     );
   }
 
-  const { overallScore, checks } = result.data;
+  const { overallScore, checks, aiInsights, aiUnavailableReason } = result.data;
   const allIssues = checks.flatMap((c) =>
     c.issues.map((issue) => ({ ...issue, category: c.label }))
   );
@@ -78,9 +84,49 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ))}
       </div>
 
+      {/* AI insights section */}
       <div className="mt-6 rounded-lg border border-surface-border bg-surface p-4">
-        <p className="text-sm font-medium">Issues</p>
-        {allIssues.length === 0 ? (
+        <p className="text-sm font-medium">AI content relevance</p>
+        {aiInsights ? (
+          <div className="mt-3 space-y-2">
+            {(
+              [
+                ["Title", aiInsights.relevance.title_match, aiInsights.relevance.title_match_reason],
+                ["Meta description", aiInsights.relevance.meta_match, aiInsights.relevance.meta_match_reason],
+                ["H1", aiInsights.relevance.h1_match, aiInsights.relevance.h1_match_reason],
+              ] as const
+            ).map(([label, rating, reason]) => (
+              <p key={label} className="text-xs">
+                <span className="font-medium">{label}:</span>{" "}
+                <span className={`font-semibold ${relevanceColor(rating)}`}>{rating}</span>
+                {" — "}
+                <span className="text-foreground/70">{reason}</span>
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1 text-xs text-foreground/60">
+            AI relevance check unavailable{aiUnavailableReason ? `: ${aiUnavailableReason}` : "."}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 rounded-lg border border-surface-border bg-surface p-4">
+        <p className="text-sm font-medium">
+          {aiInsights ? "AI-prioritized fixes" : "Issues"}
+        </p>
+        {aiInsights ? (
+          <ol className="mt-2 space-y-3">
+            {aiInsights.prioritized_fixes
+              .sort((a, b) => a.rank - b.rank)
+              .map((fix) => (
+                <li key={fix.rank} className="text-xs">
+                  <span className="font-medium">{fix.rank}. {fix.issue}</span>
+                  <p className="mt-0.5 text-foreground/60">{fix.why_it_matters}</p>
+                </li>
+              ))}
+          </ol>
+        ) : allIssues.length === 0 ? (
           <p className="mt-1 text-xs text-foreground/60">
             No issues found — this page passed every check.
           </p>

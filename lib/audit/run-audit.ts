@@ -1,9 +1,11 @@
+import * as cheerio from "cheerio";
 import { runChecks, AuditResult } from "@/lib/audit/checks";
+import { getAiInsights, AiInsights } from "@/lib/audit/ai-insights";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
 export type AuditOutcome =
-  | { ok: true; data: AuditResult }
+  | { ok: true; data: AuditResult & { aiInsights: AiInsights | null; aiUnavailableReason: string | null } }
   | { ok: false; error: string; status: number };
 
 export function isValidUrl(value: string): boolean {
@@ -13,6 +15,12 @@ export function isValidUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function extractVisibleText(html: string): string {
+  const $ = cheerio.load(html);
+  $("script, style, noscript").remove();
+  return $("body").text().replace(/\s+/g, " ").trim();
 }
 
 export async function auditUrl(rawUrl: string): Promise<AuditOutcome> {
@@ -69,9 +77,9 @@ export async function auditUrl(rawUrl: string): Promise<AuditOutcome> {
     return { ok: false, error: message, status: 502 };
   }
 
+  let checkResult: AuditResult;
   try {
-    const data = runChecks(html, url);
-    return { ok: true, data };
+    checkResult = runChecks(html, url);
   } catch (err) {
     console.error("Audit check failed:", err);
     return {
@@ -80,4 +88,18 @@ export async function auditUrl(rawUrl: string): Promise<AuditOutcome> {
       status: 500,
     };
   }
+
+  // AI insights are additive: if they fail for any reason, we still return
+  // the full rule-based audit rather than failing the whole request.
+  const bodyText = extractVisibleText(html);
+  const aiOutcome = await getAiInsights(checkResult, bodyText);
+
+  return {
+    ok: true,
+    data: {
+      ...checkResult,
+      aiInsights: aiOutcome.available ? aiOutcome.insights : null,
+      aiUnavailableReason: aiOutcome.available ? null : aiOutcome.reason,
+    },
+  };
 }
